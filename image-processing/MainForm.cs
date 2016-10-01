@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Drawing.Imaging;
 using image_processing.Extensions;
 
 namespace image_processing
@@ -23,6 +24,11 @@ namespace image_processing
                 Width = 512
             };
             LeftPictureBox.Click += new EventHandler(LoadImage);
+            var pictureBoxContextMenu = new ContextMenuStrip();
+            var saveContextItem = new ToolStripMenuItem("Save");
+            pictureBoxContextMenu.Items.Add(saveContextItem);
+            saveContextItem.Click += new EventHandler(SaveContextItem_Click);
+            LeftPictureBox.ContextMenuStrip = pictureBoxContextMenu;
             RightPictureBox = new PictureBox()
             {
                 BackColor = Color.White,
@@ -30,10 +36,11 @@ namespace image_processing
                 Width = 512
             };
             RightPictureBox.Click += new EventHandler(LoadImage);
+            RightPictureBox.ContextMenuStrip = pictureBoxContextMenu;
             var avgButton = new Button() { Text = "Avg" };
-            avgButton.Click += new EventHandler(avgButton_Click);
+            avgButton.Click += new EventHandler(AvgButton_Click);
             var lumButton = new Button() { Text = "Luminance" }; 
-            lumButton.Click += new EventHandler(lumButton_Click);
+            lumButton.Click += new EventHandler(LumButton_Click);
             var swapButton = new Button() { Text = "Swap" };
             swapButton.Click += (sender,args)=> SwapImages();
 
@@ -70,7 +77,7 @@ namespace image_processing
             menu.Items.Add(fileItem);
             Controls.Add(menu);
         }
-        private void avgButton_Click(object sender, EventArgs e)
+        private void AvgButton_Click(object sender, EventArgs e)
         {
             try
             {
@@ -81,7 +88,7 @@ namespace image_processing
                 MessageBox.Show("Picturebox is empty");
             }
         }
-        private void lumButton_Click(object sender, EventArgs e)
+        private void LumButton_Click(object sender, EventArgs e)
         {
             try
             {
@@ -131,6 +138,45 @@ namespace image_processing
             catch (NullReferenceException)
             {
                 MessageBox.Show("Picturebox is empty");
+            }
+        }
+        private void SaveContextItem_Click(object sender, EventArgs e)
+        {
+            var toolStripMenuItem = sender as ToolStripMenuItem;
+            if (toolStripMenuItem == null)
+                return;
+            var contextMenuStrip = toolStripMenuItem.Owner as ContextMenuStrip;
+            if (contextMenuStrip == null)
+                return;
+            var pictureBox = contextMenuStrip.SourceControl as PictureBox;
+            if (pictureBox == null)
+                return;
+            var sfd = new SaveFileDialog();
+            sfd.Filter = "Images|*.bmp;*.png;*.jpg";
+            ImageFormat format = ImageFormat.Png;
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                string ext = System.IO.Path.GetExtension(sfd.FileName);
+                switch (ext)
+                {
+                    case ".bmp":
+                        format = ImageFormat.Bmp;
+                        break;
+                    case ".jpg":
+                        format = ImageFormat.Jpeg;
+                        break;
+                    case ".png":
+                        format = ImageFormat.Png;
+                        break;
+                }
+                try
+                { 
+                    pictureBox.Image.Save(sfd.FileName, format);
+                }
+                catch (Exception ex) when (ex is ArgumentNullException || ex is NullReferenceException)
+                {
+                    MessageBox.Show("No image to save");
+                }
             }
         }
     }
