@@ -17,6 +17,15 @@ namespace image_processing
             Model = model;
             Width = 1100;
             Height = 700;
+
+            //Context Menu
+            var pictureBoxContextMenu = new ContextMenuStrip();
+            var saveContextItem = new ToolStripMenuItem("Save");
+            pictureBoxContextMenu.Items.Add(saveContextItem);
+            saveContextItem.Click += new EventHandler(SaveContextItem_Click);
+
+
+            //PictureBoxes
             LeftPictureBox = new PictureBox()
             {
                 BackColor = Color.White,
@@ -24,11 +33,8 @@ namespace image_processing
                 Width = 512
             };
             LeftPictureBox.Click += new EventHandler(LoadImage);
-            var pictureBoxContextMenu = new ContextMenuStrip();
-            var saveContextItem = new ToolStripMenuItem("Save");
-            pictureBoxContextMenu.Items.Add(saveContextItem);
-            saveContextItem.Click += new EventHandler(SaveContextItem_Click);
             LeftPictureBox.ContextMenuStrip = pictureBoxContextMenu;
+
             RightPictureBox = new PictureBox()
             {
                 BackColor = Color.White,
@@ -37,31 +43,8 @@ namespace image_processing
             };
             RightPictureBox.Click += new EventHandler(LoadImage);
             RightPictureBox.ContextMenuStrip = pictureBoxContextMenu;
-            var avgButton = new Button() { Text = "Avg" };
-            avgButton.Click += new EventHandler(AvgButton_Click);
-            var lumButton = new Button() { Text = "Luminance" }; 
-            lumButton.Click += new EventHandler(LumButton_Click);
-            var swapButton = new Button() { Text = "Swap" };
-            swapButton.Click += (sender,args)=> SwapImages();
 
-            var table = new TableLayoutPanel();
-            var rowsCount = 4;
-            var columnsCount = 2;
-            for(var i = 0; i < rowsCount; i++)
-            {
-                table.RowStyles.Add(new RowStyle());
-            }
-            for (var i = 0; i < columnsCount; i++)
-            {
-                table.ColumnStyles.Add(new ColumnStyle());
-            }
-            table.Controls.Add(LeftPictureBox, 0, 0);
-            table.Controls.Add(RightPictureBox, 1, 0);
-            table.Controls.Add(avgButton, 0, 1);
-            table.Controls.Add(lumButton, 0, 2);
-            table.Controls.Add(swapButton, 0, 3);
-            table.Dock = DockStyle.Fill;
-            Controls.Add(table);
+            //Main Menu
             var menu = new MenuStrip();
             var fileItem = new ToolStripMenuItem()
             {
@@ -76,6 +59,37 @@ namespace image_processing
             fileItem.DropDownItems.Add(saveItem);
             menu.Items.Add(fileItem);
             Controls.Add(menu);
+
+            //Buttons
+            var avgButton = new Button() { Text = "Avg" };
+            avgButton.Click += new EventHandler(AvgButton_Click);
+            var lumButton = new Button() { Text = "Luminance" }; 
+            lumButton.Click += new EventHandler(LumButton_Click);
+            var swapButton = new Button() { Text = "Swap" };
+            swapButton.Click += (sender,args)=> SwapImages();
+            var psnrButton = new Button() { Text = "PSNR" };
+            psnrButton.Click += (sender, args) => DisplayPSNR();
+
+            //Table
+            var table = new TableLayoutPanel();
+            var rowsCount = 5;
+            var columnsCount = 2;
+            for(var i = 0; i < rowsCount; i++)
+            {
+                table.RowStyles.Add(new RowStyle());
+            }
+            for (var i = 0; i < columnsCount; i++)
+            {
+                table.ColumnStyles.Add(new ColumnStyle());
+            }
+            table.Controls.Add(LeftPictureBox, 0, 0);
+            table.Controls.Add(RightPictureBox, 1, 0);
+            table.Controls.Add(avgButton, 0, 1);
+            table.Controls.Add(lumButton, 0, 2);
+            table.Controls.Add(swapButton, 0, 3);
+            table.Controls.Add(psnrButton, 0, 4);
+            table.Dock = DockStyle.Fill;
+            Controls.Add(table);
         }
         private void AvgButton_Click(object sender, EventArgs e)
         {
@@ -110,7 +124,7 @@ namespace image_processing
             {
                 Title = "Open Image",
                 InitialDirectory = @"C:\Test_Images",
-                Filter = "(*.png)|*.png|(*.jpg)|*.jpg|(*.jpeg)|*.jpeg|(*.gif)|*.gif|(*.bmp)|*.bmp",
+                Filter = "All Files (*.*)|*.*|(*.png)|*.png|(*.jpg)|*.jpg|(*.jpeg)|*.jpeg|(*.gif)|*.gif|(*.bmp)|*.bmp",
                 CheckFileExists = true,
                 CheckPathExists = true
             };
@@ -123,7 +137,11 @@ namespace image_processing
                 }
                 catch (System.IO.FileNotFoundException)
                 {
-                    MessageBox.Show("Failed to load image");
+                    MessageBox.Show("The specified file does not exist.");
+                }
+                catch (OutOfMemoryException)
+                {
+                    MessageBox.Show("The file does not have a valid image format.");
                 }
             }
         }
@@ -178,6 +196,10 @@ namespace image_processing
                     MessageBox.Show("No image to save");
                 }
             }
+        }
+        private void DisplayPSNR()
+        {
+            MessageBox.Show(Model.CalculatePSNR(LeftPictureBox.Image, RightPictureBox.Image).ToString());
         }
     }
 }
