@@ -8,8 +8,9 @@ namespace image_processing
 {
     class MainForm : Form
     {
-        public PictureBox LeftPictureBox { get; }
-        public PictureBox RightPictureBox { get; }
+        public PictureBoxWrapper LeftPictureWrapper { get; }
+        public PictureBoxWrapper RightPictureWrapper { get; }
+        public Label PsnrLabel { get; }
         private Model Model { get; }
 
         public MainForm(Model model)
@@ -20,29 +21,37 @@ namespace image_processing
 
             //Context Menu
             var pictureBoxContextMenu = new ContextMenuStrip();
-            var saveContextItem = new ToolStripMenuItem("Save");
-            pictureBoxContextMenu.Items.Add(saveContextItem);
-            saveContextItem.Click += new EventHandler(SaveContextItem_Click);
 
+            var itemNames = new string[] {"Save","Duplicate","Avg","Lum"};
+            foreach (var itemName in itemNames)
+            {
+                var item = new ToolStripMenuItem(itemName);
+                pictureBoxContextMenu.Items.Add(item);
+                item.Click += new EventHandler(ContextMenuItem_Click);
+            }
 
             //PictureBoxes
-            LeftPictureBox = new PictureBox()
+            var leftPictureBox = new PictureBox()
             {
                 BackColor = Color.White,
                 Height = 512,
                 Width = 512
             };
-            LeftPictureBox.Click += new EventHandler(LoadImage);
-            LeftPictureBox.ContextMenuStrip = pictureBoxContextMenu;
+            LeftPictureWrapper = new PictureBoxWrapper(leftPictureBox);
+            LeftPictureWrapper.Click += new EventHandler(LoadImage);
+            LeftPictureWrapper.ContextMenuStrip = pictureBoxContextMenu;
+            LeftPictureWrapper.RegisterObserver(model);
 
-            RightPictureBox = new PictureBox()
+            var rightPictureBox = new PictureBox()
             {
                 BackColor = Color.White,
                 Height = 512,
                 Width = 512
             };
-            RightPictureBox.Click += new EventHandler(LoadImage);
-            RightPictureBox.ContextMenuStrip = pictureBoxContextMenu;
+            RightPictureWrapper = new PictureBoxWrapper(rightPictureBox);
+            RightPictureWrapper.Click += new EventHandler(LoadImage);
+            RightPictureWrapper.ContextMenuStrip = pictureBoxContextMenu;
+            RightPictureWrapper.RegisterObserver(model);
 
             //Main Menu
             var menu = new MenuStrip();
@@ -60,15 +69,16 @@ namespace image_processing
             menu.Items.Add(fileItem);
             Controls.Add(menu);
 
+            //Labels
+            PsnrLabel = new Label() { Text = "dfwf" };
+
             //Buttons
-            var avgButton = new Button() { Text = "Avg" };
-            avgButton.Click += new EventHandler(AvgButton_Click);
-            var lumButton = new Button() { Text = "Luminance" }; 
-            lumButton.Click += new EventHandler(LumButton_Click);
             var swapButton = new Button() { Text = "Swap" };
             swapButton.Click += (sender,args)=> SwapImages();
             var psnrButton = new Button() { Text = "PSNR" };
             psnrButton.Click += (sender, args) => DisplayPSNR();
+            var toYButton = new Button() { Text = "To Y" };
+            toYButton.Click += (sender, args) => ToY();
 
             //Table
             var table = new TableLayoutPanel();
@@ -82,31 +92,35 @@ namespace image_processing
             {
                 table.ColumnStyles.Add(new ColumnStyle());
             }
-            table.Controls.Add(LeftPictureBox, 0, 0);
-            table.Controls.Add(RightPictureBox, 1, 0);
-            table.Controls.Add(avgButton, 0, 1);
-            table.Controls.Add(lumButton, 0, 2);
-            table.Controls.Add(swapButton, 0, 3);
-            table.Controls.Add(psnrButton, 0, 4);
+            table.Controls.Add(LeftPictureWrapper, 0, 0);
+            table.Controls.Add(RightPictureWrapper, 1, 0);
+            table.Controls.Add(swapButton, 0, 1);
+            table.Controls.Add(psnrButton, 0, 2);
+            table.Controls.Add(toYButton, 0, 3);
+            table.Controls.Add(PsnrLabel, 0, 4);
             table.Dock = DockStyle.Fill;
             Controls.Add(table);
         }
-        private void AvgButton_Click(object sender, EventArgs e)
+        private void ToGrayScaleAvg(PictureBoxWrapper pictureBoxWrapper)
         {
             try
             {
-                RightPictureBox.Image = (new Bitmap(LeftPictureBox.Image)).ToGrayscale(ColorInfo.AvgComponent);
+                var bmp = new Bitmap(pictureBoxWrapper.Image);
+                bmp.ToGrayscale(ColorInfo.AvgComponent);
+                pictureBoxWrapper.Image = bmp;
             }
             catch (NullReferenceException)
             {
                 MessageBox.Show("Picturebox is empty");
             }
         }
-        private void LumButton_Click(object sender, EventArgs e)
+        private void ToGrayScaleLum(PictureBoxWrapper pictureBox)
         {
             try
             {
-                RightPictureBox.Image = (new Bitmap(LeftPictureBox.Image)).ToGrayscale(ColorInfo.Luminance);
+                var bmp = new Bitmap(pictureBox.Image);
+                bmp.ToGrayscale(ColorInfo.Luminance);
+                pictureBox.Image = bmp;
             }
             catch (NullReferenceException)
             {
@@ -115,8 +129,8 @@ namespace image_processing
         }
         private void LoadImage(object sender, EventArgs e)
         {
-            var pictureBox = sender as PictureBox;
-            if (pictureBox == null)
+            var pictureBoxWrapper = sender as PictureBoxWrapper;
+            if (pictureBoxWrapper == null)
             {
                 return;
             }
@@ -133,7 +147,13 @@ namespace image_processing
             {
                 try
                 {
-                    pictureBox.Image = Image.FromFile(openFileDialog.FileName);
+                    var img = Image.FromFile(openFileDialog.FileName);
+                    if (img.Height != 512 || img.Width != 512)
+                    {
+                        MessageBox.Show("Only 512x512 images are supported");
+                        return;
+                    }
+                    pictureBoxWrapper.Image = img;
                 }
                 catch (System.IO.FileNotFoundException)
                 {
@@ -149,16 +169,16 @@ namespace image_processing
         {
             try
             {
-                Bitmap tmp = new Bitmap(LeftPictureBox.Image);
-                LeftPictureBox.Image = RightPictureBox.Image;
-                RightPictureBox.Image = tmp;
+                Bitmap tmp = new Bitmap(LeftPictureWrapper.Image);
+                LeftPictureWrapper.Image = RightPictureWrapper.Image;
+                RightPictureWrapper.Image = tmp;
             }
             catch (NullReferenceException)
             {
                 MessageBox.Show("Picturebox is empty");
             }
         }
-        private void SaveContextItem_Click(object sender, EventArgs e)
+        private void ContextMenuItem_Click(object sender, EventArgs e)
         {
             var toolStripMenuItem = sender as ToolStripMenuItem;
             if (toolStripMenuItem == null)
@@ -166,9 +186,28 @@ namespace image_processing
             var contextMenuStrip = toolStripMenuItem.Owner as ContextMenuStrip;
             if (contextMenuStrip == null)
                 return;
-            var pictureBox = contextMenuStrip.SourceControl as PictureBox;
-            if (pictureBox == null)
+            var pictureBoxWrapper = contextMenuStrip.SourceControl as PictureBoxWrapper;
+            if (pictureBoxWrapper == null)
                 return;
+            switch (toolStripMenuItem.Text)
+            {
+                case "Duplicate":
+                    DuplicateContent(pictureBoxWrapper);
+                    break;
+                case "Save":
+                    SaveContent(pictureBoxWrapper);
+                    break;
+                case "Avg":
+                    ToGrayScaleAvg(pictureBoxWrapper);
+                    break;
+                case "Lum":
+                    ToGrayScaleLum(pictureBoxWrapper);
+                    break;
+
+            }
+        }
+        private void SaveContent(PictureBoxWrapper pictureBoxWrapper)
+        {
             var sfd = new SaveFileDialog();
             sfd.Filter = "Images|*.bmp;*.png;*.jpg";
             ImageFormat format = ImageFormat.Png;
@@ -189,7 +228,7 @@ namespace image_processing
                 }
                 try
                 { 
-                    pictureBox.Image.Save(sfd.FileName, format);
+                    pictureBoxWrapper.Image.Save(sfd.FileName, format);
                 }
                 catch (Exception ex) when (ex is ArgumentNullException || ex is NullReferenceException)
                 {
@@ -197,9 +236,21 @@ namespace image_processing
                 }
             }
         }
+        private void DuplicateContent(PictureBoxWrapper pictureBoxWrapper)
+        {
+            if (LeftPictureWrapper == pictureBoxWrapper)
+            {
+                RightPictureWrapper.Image = LeftPictureWrapper.Image;
+            }
+            LeftPictureWrapper.Image = RightPictureWrapper.Image;
+        }
         private void DisplayPSNR()
         {
-            MessageBox.Show(Model.CalculatePSNR(LeftPictureBox.Image, RightPictureBox.Image).ToString());
+            MessageBox.Show(Model.CalculatePSNR(LeftPictureWrapper.Image, RightPictureWrapper.Image).ToString());
+        }
+        private void ToY()
+        {
+            RightPictureWrapper.Image = RgbToYcbcrConverter.ToYcbcrToRgb(new Bitmap(LeftPictureWrapper.Image));
         }
     }
 }

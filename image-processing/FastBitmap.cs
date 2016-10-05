@@ -8,6 +8,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using image_processing.Extensions;
 
 namespace image_processing
 {
@@ -629,24 +630,6 @@ namespace image_processing
                 if (_fastBitmap._locked)
                     _fastBitmap.Unlock();
             }
-        }
-    }
-    /// <summary>
-    /// Static class that contains fast bitmap extension methdos for the Bitmap class
-    /// </summary>
-    public static class FastBitmapExtensions
-    {
-        /// <summary>
-        /// Locks this bitmap into memory and returns a FastBitmap that can be used to manipulate its pixels
-        /// </summary>
-        /// <param name="bitmap">The bitmap to lock</param>
-        /// <returns>A locked FastBitmap</returns>
-        public static FastBitmap FastLock(this Bitmap bitmap)
-        {
-            FastBitmap fast = new FastBitmap(bitmap);
-            fast.Lock();
-
-            return fast;
         }
     }
 }

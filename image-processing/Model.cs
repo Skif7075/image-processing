@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Windows.Forms;
 using System.Drawing;
+using image_processing.Extensions;
 
 namespace image_processing
 {
-    class Model
+    class Model : IObserver
     {
-        public Form View { get; }
+        public MainForm View { get; }
 
         public Model()
         {
@@ -19,7 +20,7 @@ namespace image_processing
             {
                 using (var fastBitmapB = (new Bitmap(b).FastLock()))
                 {
-                    var sum = 0l;
+                    var sum = 0L;
                     for (var i = 0; i < 512; i++)
                     {
                         for (var j = 0; j < 512; j++)
@@ -29,9 +30,18 @@ namespace image_processing
                             sum += (int)Math.Pow(fastBitmapA.GetPixel(i, j).B - fastBitmapB.GetPixel(i, j).B, 2);
                         }
                     }
-                    return 10 * Math.Log10(255 * 255 * 512.0 / sum * 512);
+                    var psnr = 10 * Math.Log10((3 << 18) / ((double)sum) * 255 * 255);
+                    if (psnr < 10e-8)
+                        return 0;
+                    return psnr;
                 }
             }
+        }
+
+        public void Update(IImageChangeObservable pctureHolder)
+        {
+            if (!View.LeftPictureWrapper.IsEmpty()&&!View.RightPictureWrapper.IsEmpty())
+                View.PsnrLabel.Text = CalculatePSNR(View.LeftPictureWrapper.Image,View.RightPictureWrapper.Image).ToString();
         }
     }
 }
