@@ -70,7 +70,7 @@ namespace image_processing
             Controls.Add(menu);
 
             //Labels
-            PsnrLabel = new Label() { Text = "dfwf" };
+            PsnrLabel = new Label() { Text = "PSNR: ", Width=400, Font = new Font("Arial", 16)};
 
             //Buttons
             var swapButton = new Button() { Text = "Swap" };
@@ -250,7 +250,7 @@ namespace image_processing
         }
         private void ToY()
         {
-            RightPictureWrapper.Image = RgbToYcbcrConverter.ToYcbcrToRgb(new Bitmap(LeftPictureWrapper.Image));
+            RightPictureWrapper.Image = YCbCr.ToRgb(YCbCr.ToYcbcr(new Bitmap(LeftPictureWrapper.Image)));
         }
     }
 }

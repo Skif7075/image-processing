@@ -40,8 +40,9 @@ namespace image_processing
 
         public void Update(IImageChangeObservable pctureHolder)
         {
-            if (!View.LeftPictureWrapper.IsEmpty()&&!View.RightPictureWrapper.IsEmpty())
-                View.PsnrLabel.Text = CalculatePSNR(View.LeftPictureWrapper.Image,View.RightPictureWrapper.Image).ToString();
+            if (!View.LeftPictureWrapper.IsEmpty() && !View.RightPictureWrapper.IsEmpty())
+                View.PsnrLabel.Text = "PSNR: " + CalculatePSNR(View.LeftPictureWrapper.Image, View.RightPictureWrapper.Image).ToString();
+            else View.PsnrLabel.Text = "PSNR: undefined";
         }
     }
 }
